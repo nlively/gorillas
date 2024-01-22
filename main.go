@@ -22,10 +22,7 @@ func (g *game) Update() error {
     g.fire()
     fmt.Println("Fire!")
   } else if g.firing {
-    g.projectile.x += 5
-    if g.projectile.x >= screen_width {
-      g.stop_projectile()
-    }
+    g.move_projectile()
   }
   return nil
 }

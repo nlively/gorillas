@@ -7,12 +7,11 @@ import (
 )
 
 func describe_wind_direction(g *game) string {
-  switch g.wind_direction {
-    case true:
-      return "east"
-    default:
-      return "west"
-  }
+  if g.wind < 0 {
+		return "west"
+	} else {
+		return "east"
+	}
 }
 
 func capture_angle(angle *int) bool {

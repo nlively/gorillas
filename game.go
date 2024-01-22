@@ -2,6 +2,7 @@ package main
 
 import (
   "fmt"
+	"math"
   "math/rand"
   "log"
   "github.com/hajimehoshi/ebiten/v2"
@@ -19,14 +20,13 @@ type game struct {
 	holes []hole
 	player1 player
 	player2 player
-  wind_speed int
-  wind_direction bool
+  wind float64
   winner bool
   keys []ebiten.Key
   firing bool
   projectile projectile
-	angle int
-	velocity int
+	angle float64
+	velocity float64
 	setup bool
 }
 
@@ -65,13 +65,7 @@ func (g *game) setup_buildings() {
 }
 
 func (g *game) setup_game() {
-  g.wind_speed = rand.Intn(20)
-  switch rand.Intn(2) {
-    case 1:
-        g.wind_direction = true
-    default:
-        g.wind_direction = false
-  }
+  g.wind = rand.Float64() - 0.5
 
   g.setup_players()
   g.setup_buildings()  
@@ -107,10 +101,48 @@ func (g *game) setup_grid(screen *ebiten.Image) {
 
 func (g *game) fire() {
   g.angle = rand.Intn(90)
-  g.velocity = rand.Intn(175) + 25
+  g.velocity = 25 + (rand.Float64() * 175 * .7)
   g.firing = true
 	g.projectile.x = g.player1.x
 	g.projectile.y = g.player1.y
+
+	fmt.Printf("angle %d, velocity %d, wind %f\n", g.angle, g.velocity, g.wind)
+
+	radian := float64(g.angle) * math.Pi / 180;
+
+	// Calculate increment values
+	g.projectile.dx = float64(g.velocity) * math.Cos( radian ) + float64(g.wind);
+	g.projectile.dy = float64(g.velocity) * math.Sin( radian ) * -1 
+
+	g.projectile.dx *= scale
+	g.projectile.dy *= scale
+
+	fmt.Printf("dx,dy = %f, %f\n", g.projectile.dx, g.projectile.dy)
+}
+
+func (g *game) move_projectile() {
+
+	// Increment coords by a set increment value
+	g.projectile.dx -= float64(g.wind) * scale
+	g.projectile.dy += float64(gravity) * scale
+
+	g.projectile.x += int(g.projectile.dx)
+	g.projectile.y += int(g.projectile.dy)
+
+	// g.projectile.px += g.projectile.dx * scale;
+	// g.projectile.py += g.projectile.dy * scale;
+
+	// adjusted_x := float64(g.projectile.x) + g.projectile.px
+	// adjusted_y := float64(g.projectile.y) - g.projectile.py
+	
+	// fmt.Printf("projectile coords %f, %f\n", g.projectile.x, g.projectile.y)
+
+	// if adjusted_x > screen_width || adjusted_y > screen_height {
+	// 	g.stop_projectile()
+	// }
+	if g.projectile.x > screen_width || g.projectile.y > screen_height {
+		g.stop_projectile()
+	}
 }
 
 func (g *game) stop_projectile() {
@@ -118,15 +150,15 @@ func (g *game) stop_projectile() {
 }
 
 func (g *game) summarize() {
-  fmt.Println("-----")
-  fmt.Println("Player 1 is", g.player1.name)
-  fmt.Println("Player 2 is", g.player2.name)
-  fmt.Println("Wind direction is", describe_wind_direction(g))
-  fmt.Printf("Wind speed is %dmph\n", g.wind_speed)
+  // fmt.Println("-----")
+  // fmt.Println("Player 1 is", g.player1.name)
+  // fmt.Println("Player 2 is", g.player2.name)
+  // fmt.Println("Wind direction is", describe_wind_direction(g))
+  // fmt.Printf("Wind speed is %dmph\n", g.wind_speed)
 
-  for i := 0; i < len(g.buildings); i++ {
-    fmt.Printf("Building %d has %d windows and %d floors\n", i+1, g.buildings[i].windows, g.buildings[i].floors)
-  }
+  // for i := 0; i < len(g.buildings); i++ {
+  //   fmt.Printf("Building %d has %d windows and %d floors\n", i+1, g.buildings[i].windows, g.buildings[i].floors)
+  // }
 }
 
 func (g *game) draw_projectile(screen *ebiten.Image) {
@@ -139,8 +171,15 @@ func (g *game) draw_projectile(screen *ebiten.Image) {
     log.Fatal(err)
   }
 
-  new_x := float64(g.projectile.x) - float64(img.Bounds().Dx() / 2)
+  // new_x := float64(g.projectile.x) + g.projectile.px - float64(img.Bounds().Dx() / 2)
+  // new_y := float64(g.projectile.y) - g.projectile.py - float64(img.Bounds().Dy() / 2)
+
+	// Center the image on the current point
+	new_x := float64(g.projectile.x) + float64(img.Bounds().Dx() / 2)
   new_y := float64(g.projectile.y) - float64(img.Bounds().Dy() / 2)
+
+	
+	// fmt.Printf("drawing at %f, %f\n", new_x, new_y)
 
   op := &ebiten.DrawImageOptions{}
   op.GeoM.Translate(new_x, new_y)

@@ -17,11 +17,11 @@ import (
 type player struct {
   name string
 	path string
-	x int
-	y int
+	x float64
+	y float64
 }
 
-func (p *player) set_coordinates(x int, y int) {
+func (p *player) set_coordinates(x float64, y float64) {
 	p.x = x
 	p.y = y
 }
@@ -35,8 +35,8 @@ func (p *player) draw_image(screen *ebiten.Image) {
     log.Fatal(err)
   }
 
-  new_x := float64(p.x) - float64(img.Bounds().Dx() / 2)
-  new_y := float64(p.y) - float64(img.Bounds().Dy())
+  new_x := p.x - float64(img.Bounds().Dx() / 2)
+  new_y := p.y - float64(img.Bounds().Dy())
 
   op := &ebiten.DrawImageOptions{}
   op.GeoM.Translate(new_x, new_y)

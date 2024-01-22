@@ -6,6 +6,11 @@ type hole struct {
 }
 
 type projectile struct {
-  x int
-  y int
+  x float64
+  y float64
+	dx float64
+	dy float64
+	
+	px float64
+	py float64
 }
