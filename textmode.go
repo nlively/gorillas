@@ -2,10 +2,7 @@ package main
 
 // NOTE: this file can probably be deleted.  input/output in text mode
 
-import (
-	"fmt"
-)
-
+/*
 func describe_wind_direction(g *game) string {
   if g.wind < 0 {
 		return "west"
@@ -64,3 +61,4 @@ func capture_player_name(number int) string {
   fmt.Scanln(&name_input)
   return name_input
 }
+*/
