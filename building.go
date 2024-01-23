@@ -44,3 +44,13 @@ func (b *building) draw_building(screen *ebiten.Image) {
 		}
 	}
 }
+
+// detect collision between projectile and building
+func (b *building) detect_collision(projectile *projectile) bool {
+	px := float32(projectile.x) + (projectile_width / 2)
+	py := float32(projectile.y) + (projectile_height / 2)
+	if px > b.x && px < b.x+b.width && py > b.y && py < b.y+b.height {
+		return true
+	}
+	return false
+}

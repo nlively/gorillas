@@ -19,7 +19,7 @@ import (
 
 type game struct {
 	buildings []building
-	//holes      []hole
+	holes      []hole
 	player1 player
 	player2 player
 	wind    float64
@@ -105,7 +105,7 @@ func (g *game) fire() {
 	g.velocity = 25 + (rand.Float64() * 175 * .7)
 	g.firing = true
 	g.projectile.x = g.player1.x
-	g.projectile.y = g.player1.y
+	g.projectile.y = g.player1.y - 32
 
 	fmt.Printf("angle %f, velocity %f, wind %f\n", g.angle, g.velocity, g.wind)
 
@@ -141,9 +141,40 @@ func (g *game) move_projectile() {
 	// if adjusted_x > screen_width || adjusted_y > screen_height {
 	// 	g.stop_projectile()
 	// }
+
+	// detect a collision between the projectile and a player
+	if g.projectile.detect_collision(&g.player1) {
+		g.stop_projectile()
+		fmt.Println("Player 1 hit!")
+		return
+	} else if g.projectile.detect_collision(&g.player2) {
+		g.stop_projectile()
+		fmt.Println("Player 2 hit!")
+		return
+	}
+
+  // detect a collision between the projectile and a building	
+	for i := 0; i < len(g.buildings); i++ {
+		building := &g.buildings[i]
+		if building.detect_collision(&g.projectile) {
+			g.stop_projectile()
+			// add hole to game
+			g.add_hole(&g.projectile)
+			break
+		}
+	} 
+	
 	if g.projectile.x > screen_width || g.projectile.y > screen_height {
 		g.stop_projectile()
 	}
+}
+
+// function to add a hole to the game
+func (g *game) add_hole(projectile *projectile) {
+	px := projectile.x + (projectile_width / 2)
+	py := projectile.y + (projectile_height / 2)
+	h := hole{int(px), int(py)}
+	g.holes = append(g.holes, h)
 }
 
 func (g *game) stop_projectile() {

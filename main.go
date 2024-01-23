@@ -47,6 +47,11 @@ func (g *game) Draw(screen *ebiten.Image) {
   g.player1.draw_image(screen)
   g.player2.draw_image(screen)
 
+  // draw holes as black circles
+  for i := 0; i < len(g.holes); i++ {
+    g.holes[i].draw_hole(screen)
+  }
+
   if g.firing {
     g.draw_projectile(screen)
   }
