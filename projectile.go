@@ -14,8 +14,8 @@ type projectile struct {
 func (p *projectile) detect_collision(player *player) bool {
 	px := float64(p.x)
 	py := float64(p.y)
-	if px < player.x+player_width && px+projectile_width > player.x && py < player.y+player_height && py+projectile_height > player.y {
+	if px < player.x+PLAYER_WIDTH && px+PROJECTILE_WIDTH > player.x && py < player.y+PLAYER_HEIGHT && py+PROJECTILE_HEIGHT > player.y {
 		return true
 	}
 	return false
-} 	
+}

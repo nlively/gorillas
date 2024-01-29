@@ -3,7 +3,7 @@ package main
 // NOTE: this file can probably be deleted.  input/output in text mode
 
 /*
-func describe_wind_direction(g *game) string {
+func describe_wind_direction(g *Game) string {
   if g.wind < 0 {
 		return "west"
 	} else {

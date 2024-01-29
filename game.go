@@ -17,29 +17,46 @@ import (
 	_ "image/png"
 )
 
-type game struct {
-	buildings []building
+type Game struct {
+	buildings  []building
 	holes      []hole
-	player1 player
-	player2 player
-	wind    float64
-	//winner     bool
+	player1    player
+	player2    player
+	wind       float64
+	winner     *player
 	keys       []ebiten.Key
 	firing     bool
 	projectile projectile
 	angle      float64
 	velocity   float64
 	setup      bool
+	state      int
+	intro      Intro
 }
 
-func (g *game) setup_players() {
-	// g.board.players[0] = player{name: capture_player_name(1)}
-	// g.board.players[1] = player{name: capture_player_name(2)}
+type GameState struct {
+	name string
+}
+
+const INTRO = 1
+const MAIN_GAME = 2
+const VICTORY = 3
+
+func (g *Game) switch_state(new_state int) {
+	g.state = new_state
+}
+
+func (g *Game) trigger_win(player *player) {
+	g.winner = player
+	g.switch_state(VICTORY)
+}
+
+func (g *Game) setup_players() {
 	g.player1 = player{name: "Tori", path: "images/tori.png"}
 	g.player2 = player{name: "Evan", path: "images/evan.png"}
 }
 
-func (g *game) setup_buildings() {
+func (g *Game) setup_buildings() {
 	g.buildings = make([]building, 0)
 	i := 0
 	total_windows := 0
@@ -47,8 +64,8 @@ func (g *game) setup_buildings() {
 	// Randomly generate enough buildings to fill the screen
 	for {
 		var windows int
-		if total_windows >= max_windows-5 {
-			windows = max_windows - total_windows
+		if total_windows >= MAX_WINDOWS-5 {
+			windows = MAX_WINDOWS - total_windows
 		} else {
 			windows = rand.Intn(3) + 3
 		}
@@ -58,21 +75,29 @@ func (g *game) setup_buildings() {
 
 		g.buildings = append(g.buildings, b)
 
-		if total_windows >= max_windows {
+		if total_windows >= MAX_WINDOWS {
 			break
 		}
 		i++
 	}
 }
 
-func (g *game) setup_game() {
+func (g *Game) setup_game() {
 	g.wind = rand.Float64() - 0.5
 
 	g.setup_players()
 	g.setup_buildings()
 }
 
-func (g *game) setup_grid(screen *ebiten.Image) {
+// function to start over
+func (g *Game) start_over() {
+	g.setup = false
+	g.setup_game()
+	g.holes = make([]hole, 0)
+	g.firing = false
+}
+
+func (g *Game) setup_grid(screen *ebiten.Image) {
 	g.setup = true
 	running_width := 0
 
@@ -100,7 +125,7 @@ func (g *game) setup_grid(screen *ebiten.Image) {
 	}
 }
 
-func (g *game) fire() {
+func (g *Game) fire() {
 	g.angle = float64(rand.Intn(90))
 	g.velocity = 25 + (rand.Float64() * 175 * .7)
 	g.firing = true
@@ -115,45 +140,33 @@ func (g *game) fire() {
 	g.projectile.dx = float64(g.velocity)*math.Cos(radian) + float64(g.wind)
 	g.projectile.dy = float64(g.velocity) * math.Sin(radian) * -1
 
-	g.projectile.dx *= scale
-	g.projectile.dy *= scale
+	g.projectile.dx *= SCALE
+	g.projectile.dy *= SCALE
 
 	fmt.Printf("dx,dy = %f, %f\n", g.projectile.dx, g.projectile.dy)
 }
 
-func (g *game) move_projectile() {
+func (g *Game) move_projectile() {
 
 	// Increment coords by a set increment value
-	g.projectile.dx -= float64(g.wind) * scale
-	g.projectile.dy += float64(gravity) * scale
+	g.projectile.dx -= float64(g.wind) * SCALE
+	g.projectile.dy += float64(GRAVITY) * SCALE
 
 	g.projectile.x += g.projectile.dx
 	g.projectile.y += g.projectile.dy
 
-	// g.projectile.px += g.projectile.dx * scale;
-	// g.projectile.py += g.projectile.dy * scale;
-
-	// adjusted_x := float64(g.projectile.x) + g.projectile.px
-	// adjusted_y := float64(g.projectile.y) - g.projectile.py
-
-	// fmt.Printf("projectile coords %f, %f\n", g.projectile.x, g.projectile.y)
-
-	// if adjusted_x > screen_width || adjusted_y > screen_height {
-	// 	g.stop_projectile()
-	// }
-
 	// detect a collision between the projectile and a player
 	if g.projectile.detect_collision(&g.player1) {
 		g.stop_projectile()
-		fmt.Println("Player 1 hit!")
+		g.trigger_win(&g.player2)
 		return
 	} else if g.projectile.detect_collision(&g.player2) {
 		g.stop_projectile()
-		fmt.Println("Player 2 hit!")
+		g.trigger_win(&g.player1)
 		return
 	}
 
-  // detect a collision between the projectile and a building	
+	// detect a collision between the projectile and a building
 	for i := 0; i < len(g.buildings); i++ {
 		building := &g.buildings[i]
 		if building.detect_collision(&g.projectile) {
@@ -162,40 +175,26 @@ func (g *game) move_projectile() {
 			g.add_hole(&g.projectile)
 			break
 		}
-	} 
-	
-	if g.projectile.x > screen_width || g.projectile.y > screen_height {
+	}
+
+	if g.projectile.x > SCREEN_WIDTH || g.projectile.y > SCREEN_HEIGHT {
 		g.stop_projectile()
 	}
 }
 
 // function to add a hole to the game
-func (g *game) add_hole(projectile *projectile) {
-	px := projectile.x + (projectile_width / 2)
-	py := projectile.y + (projectile_height / 2)
+func (g *Game) add_hole(projectile *projectile) {
+	px := projectile.x + (PROJECTILE_WIDTH / 2)
+	py := projectile.y + (PROJECTILE_HEIGHT / 2)
 	h := hole{int(px), int(py)}
 	g.holes = append(g.holes, h)
 }
 
-func (g *game) stop_projectile() {
+func (g *Game) stop_projectile() {
 	g.firing = false
 }
 
-/*
-func (g *game) summarize() {
-	// fmt.Println("-----")
-	// fmt.Println("Player 1 is", g.player1.name)
-	// fmt.Println("Player 2 is", g.player2.name)
-	// fmt.Println("Wind direction is", describe_wind_direction(g))
-	// fmt.Printf("Wind speed is %dmph\n", g.wind_speed)
-
-	// for i := 0; i < len(g.buildings); i++ {
-	//   fmt.Printf("Building %d has %d windows and %d floors\n", i+1, g.buildings[i].windows, g.buildings[i].floors)
-	// }
-}
-*/
-
-func (g *game) draw_projectile(screen *ebiten.Image) {
+func (g *Game) draw_projectile(screen *ebiten.Image) {
 	path := "images/pizza.png"
 	var err error
 	var img *ebiten.Image
@@ -205,14 +204,9 @@ func (g *game) draw_projectile(screen *ebiten.Image) {
 		log.Fatal(err)
 	}
 
-	// new_x := float64(g.projectile.x) + g.projectile.px - float64(img.Bounds().Dx() / 2)
-	// new_y := float64(g.projectile.y) - g.projectile.py - float64(img.Bounds().Dy() / 2)
-
 	// Center the image on the current point
 	new_x := float64(g.projectile.x) + float64(img.Bounds().Dx()/2)
 	new_y := float64(g.projectile.y) - float64(img.Bounds().Dy()/2)
-
-	// fmt.Printf("drawing at %f, %f\n", new_x, new_y)
 
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(new_x, new_y)

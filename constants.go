@@ -1,18 +1,24 @@
 package main
 
-const screen_width = 640
-const screen_height = 480
+import (
+	"image/color"
+)
 
-const window_width = 6
-const window_height = 8
+const SCREEN_WIDTH = 640
+const SCREEN_HEIGHT = 480
 
-const max_windows = int(screen_width / (window_width*2))
+const BLDG_WINDOW_WIDTH = 6
+const BLDG_WINDOW_HEIGHT = 8
 
-const gravity = 2.2
-const scale = 0.2
+const MAX_WINDOWS = int(SCREEN_WIDTH / (BLDG_WINDOW_WIDTH * 2))
 
-const projectile_width = 16
-const projectile_height = 16
+const GRAVITY = 2.2
+const SCALE = 0.2
 
-const player_width = 32
-const player_height = 32
+const PROJECTILE_WIDTH = 16
+const PROJECTILE_HEIGHT = 16
+
+const PLAYER_WIDTH = 32
+const PLAYER_HEIGHT = 32
+
+var BACKGROUND_COLOR = color.RGBA{0x1B, 0x00, 0x2F, 0xFF}

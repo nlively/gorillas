@@ -19,11 +19,11 @@ type building struct {
 }
 
 func (b *building) building_width() int {
-	return b.windows * (window_width * 2)
+	return b.windows * (BLDG_WINDOW_WIDTH * 2)
 }
 
 func (b *building) building_height() int {
-	return b.floors * (window_height * 2)
+	return b.floors * (BLDG_WINDOW_HEIGHT * 2)
 }
 
 func (b *building) set_coordinates(x float32, y float32, width float32, height float32) {
@@ -38,17 +38,17 @@ func (b *building) draw_building(screen *ebiten.Image) {
 
 	for j := 0; j < b.windows; j++ {
 		for k := 0; k < b.floors; k++ {
-			win_x := (b.x + float32(12*j)) + (window_width / 2)
-			win_y := b.y + float32(16*k) + (window_height / 2)
-			vector.DrawFilledRect(screen, win_x, win_y, window_width, window_height, color.RGBA{0xff, 0xff, 0xff, 0x99}, true)
+			win_x := (b.x + float32(12*j)) + (BLDG_WINDOW_WIDTH / 2)
+			win_y := b.y + float32(16*k) + (BLDG_WINDOW_HEIGHT / 2)
+			vector.DrawFilledRect(screen, win_x, win_y, BLDG_WINDOW_WIDTH, BLDG_WINDOW_HEIGHT, color.RGBA{0xff, 0xff, 0xff, 0x99}, true)
 		}
 	}
 }
 
 // detect collision between projectile and building
 func (b *building) detect_collision(projectile *projectile) bool {
-	px := float32(projectile.x) + (projectile_width / 2)
-	py := float32(projectile.y) + (projectile_height / 2)
+	px := float32(projectile.x) + (PROJECTILE_WIDTH / 2)
+	py := float32(projectile.y) + (PROJECTILE_HEIGHT / 2)
 	if px > b.x && px < b.x+b.width && py > b.y && py < b.y+b.height {
 		return true
 	}
