@@ -3,19 +3,12 @@ package main
 import (
 	"fmt"
 	"github.com/hajimehoshi/ebiten/v2"
-	// "github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"log"
-	"math/rand"
-	// "github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
-	// "github.com/hajimehoshi/ebiten/v2/text"
-	// "image"
-	"image/color"
 	_ "image/png"
+	"log"
 )
 
 func (g *Game) Update() error {
-	// g.keys = inpututil.AppendPressedKeys(g.keys[:0])
 	switch g.state {
 	case INTRO:
 		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
@@ -24,10 +17,32 @@ func (g *Game) Update() error {
 			g.intro.blink()
 		}
 	case MAIN_GAME:
-		if inpututil.IsKeyJustPressed(ebiten.KeySpace) && !g.firing {
-			g.fire()
-			fmt.Println("Fire!")
-		} else if g.firing {
+		// Capture turn input
+		switch g.turn_state {
+		case COLLECT_ANGLE:
+			g.angle_runes = ebiten.AppendInputChars(g.angle_runes[:0])
+			g.angle_input += valid_number_input(g.angle_runes)
+			handle_backspace(&g.angle_input)
+		case COLLECT_VELOCITY:
+			g.velocity_runes = ebiten.AppendInputChars(g.velocity_runes[:0])
+			g.velocity_input += valid_number_input(g.velocity_runes)
+			handle_backspace(&g.velocity_input)
+		}
+
+		// Handle completed turn input
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) && !g.firing {
+			if g.turn_state == COLLECT_ANGLE {
+				if g.validate_angle() {
+					g.turn_state = COLLECT_VELOCITY
+				}
+			} else if g.turn_state == COLLECT_VELOCITY {
+				if g.validate_velocity() {
+					g.fire_projectile()
+				}
+			}
+		}
+
+		if g.firing {
 			g.move_projectile()
 		}
 	case VICTORY:
@@ -38,13 +53,6 @@ func (g *Game) Update() error {
 	}
 
 	return nil
-}
-
-func random_color() color.Color {
-	red := uint8(rand.Intn(255))
-	green := uint8(rand.Intn(255))
-	blue := uint8(rand.Intn(255))
-	return color.RGBA{red, green, blue, 0xFF}
 }
 
 func (g *Game) draw_main_game(screen *ebiten.Image) {
@@ -59,13 +67,20 @@ func (g *Game) draw_main_game(screen *ebiten.Image) {
 	g.player1.draw_image(screen)
 	g.player2.draw_image(screen)
 
-	// draw holes as black circles
 	for i := 0; i < len(g.holes); i++ {
 		g.holes[i].draw_hole(screen)
 	}
 
+	g.draw_wind(screen)
+
 	if g.firing {
 		g.draw_projectile(screen)
+	} else {
+		g.draw_turn_inputs(screen)
+	}
+
+	if g.error_text != "" {
+		draw_error_text(screen, g.error_text, 240, 200)
 	}
 }
 
@@ -77,9 +92,7 @@ func (g *Game) draw_victory(screen *ebiten.Image) {
 	draw_text(screen, "Press Enter to Start Over", 190, 360)
 }
 
-// function to fill the background with a navy blue color
 func (g *Game) draw_background(screen *ebiten.Image) {
-	// screen.Fill(color.Navy)
 	screen.Fill(BACKGROUND_COLOR)
 }
 
@@ -105,6 +118,7 @@ func main() {
 
 	ebiten.SetWindowSize(SCREEN_WIDTH, SCREEN_HEIGHT)
 	ebiten.SetWindowTitle("Tori vs Evan")
+
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatal(err)
 	}

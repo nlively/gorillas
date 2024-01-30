@@ -2,36 +2,38 @@ package main
 
 import (
 	"fmt"
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"image/color"
+	_ "image/png"
 	"log"
 	"math"
 	"math/rand"
-
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-
-	// "github.com/hajimehoshi/ebiten/v2/vector"
-	// "github.com/hajimehoshi/ebiten/v2/inpututil"
-	// "github.com/hajimehoshi/ebiten/v2/text"
-	// "image"
-	// "image/color"
-	_ "image/png"
+	"strconv"
 )
 
 type Game struct {
-	buildings  []building
-	holes      []hole
-	player1    player
-	player2    player
-	wind       float64
-	winner     *player
-	keys       []ebiten.Key
-	firing     bool
-	projectile projectile
-	angle      float64
-	velocity   float64
-	setup      bool
-	state      int
-	intro      Intro
+	buildings      []building
+	holes          []hole
+	player1        player
+	player2        player
+	wind           float64
+	winner         *player
+	keys           []ebiten.Key
+	firing         bool
+	projectile     projectile
+	angle          float64
+	velocity       float64
+	setup          bool
+	state          int
+	turn_player    *player
+	turn_state     int
+	intro          Intro
+	angle_runes    []rune
+	velocity_runes []rune
+	angle_input    string
+	velocity_input string
+	error_text     string
 }
 
 type GameState struct {
@@ -41,6 +43,9 @@ type GameState struct {
 const INTRO = 1
 const MAIN_GAME = 2
 const VICTORY = 3
+
+const COLLECT_ANGLE = 10
+const COLLECT_VELOCITY = 11
 
 func (g *Game) switch_state(new_state int) {
 	g.state = new_state
@@ -82,19 +87,36 @@ func (g *Game) setup_buildings() {
 	}
 }
 
+func (g *Game) next_turn() {
+	if g.turn_player == &g.player1 {
+		g.turn_player = &g.player2
+	} else {
+		g.turn_player = &g.player1
+	}
+	g.turn_state = COLLECT_ANGLE
+	g.angle_input = ""
+	g.velocity_input = ""
+}
+
 func (g *Game) setup_game() {
 	g.wind = rand.Float64() - 0.5
 
 	g.setup_players()
 	g.setup_buildings()
+
+	g.turn_player = &g.player1
+	g.turn_state = COLLECT_ANGLE
 }
 
-// function to start over
 func (g *Game) start_over() {
 	g.setup = false
 	g.setup_game()
 	g.holes = make([]hole, 0)
 	g.firing = false
+	g.turn_state = COLLECT_ANGLE
+	g.angle_input = ""
+	g.velocity_input = ""
+	g.error_text = ""
 }
 
 func (g *Game) setup_grid(screen *ebiten.Image) {
@@ -125,12 +147,10 @@ func (g *Game) setup_grid(screen *ebiten.Image) {
 	}
 }
 
-func (g *Game) fire() {
-	g.angle = float64(rand.Intn(90))
-	g.velocity = 25 + (rand.Float64() * 175 * .7)
+func (g *Game) fire_projectile() {
 	g.firing = true
-	g.projectile.x = g.player1.x
-	g.projectile.y = g.player1.y - 32
+	g.projectile.x = g.turn_player.x
+	g.projectile.y = g.turn_player.y - 32
 
 	fmt.Printf("angle %f, velocity %f, wind %f\n", g.angle, g.velocity, g.wind)
 
@@ -139,6 +159,10 @@ func (g *Game) fire() {
 	// Calculate increment values
 	g.projectile.dx = float64(g.velocity)*math.Cos(radian) + float64(g.wind)
 	g.projectile.dy = float64(g.velocity) * math.Sin(radian) * -1
+
+	if g.turn_player == &g.player2 {
+		g.projectile.dx *= -1
+	}
 
 	g.projectile.dx *= SCALE
 	g.projectile.dy *= SCALE
@@ -182,7 +206,6 @@ func (g *Game) move_projectile() {
 	}
 }
 
-// function to add a hole to the game
 func (g *Game) add_hole(projectile *projectile) {
 	px := projectile.x + (PROJECTILE_WIDTH / 2)
 	py := projectile.y + (PROJECTILE_HEIGHT / 2)
@@ -192,6 +215,19 @@ func (g *Game) add_hole(projectile *projectile) {
 
 func (g *Game) stop_projectile() {
 	g.firing = false
+	g.next_turn()
+}
+
+func (g *Game) draw_wind(screen *ebiten.Image) {
+	var wind_text string
+	wind_human := int(math.Abs(g.wind) * 300)
+	if g.wind > 0 {
+		wind_text = fmt.Sprintf("Wind: %dmph east", wind_human)
+	} else {
+		wind_text = fmt.Sprintf("Wind: %dmph west", wind_human)
+	}
+
+	draw_any_text(screen, wind_text, 475, 30, 16, color.RGBA{0xFF, 0xFF, 0x00, 0xFF})
 }
 
 func (g *Game) draw_projectile(screen *ebiten.Image) {
@@ -212,4 +248,62 @@ func (g *Game) draw_projectile(screen *ebiten.Image) {
 	op.GeoM.Translate(new_x, new_y)
 
 	screen.DrawImage(img, op)
+}
+
+func (g *Game) draw_turn_inputs(screen *ebiten.Image) {
+	var angle_x, velocity_x int
+	var angle_input_text, velocity_input_text string
+	angle_y := 100
+	velocity_y := 125
+
+	if g.turn_player == &g.player2 {
+		angle_x = 450
+		velocity_x = 450
+	} else {
+		angle_x = 10
+		velocity_x = 10
+	}
+
+	draw_text(screen, fmt.Sprintf("%s's Turn", g.turn_player.name), 10, 40)
+
+	angle_input_text = fmt.Sprintf("Enter Angle: %s", g.angle_input)
+
+	if g.turn_state == COLLECT_VELOCITY {
+		velocity_input_text = fmt.Sprintf("Enter Velocity: %s", g.velocity_input)
+	}
+
+	draw_smaller_text(screen, angle_input_text, angle_x, angle_y)
+	draw_smaller_text(screen, velocity_input_text, velocity_x, velocity_y)
+}
+
+func (g *Game) validate_angle() bool {
+	angle, err := strconv.ParseFloat(g.angle_input, 64)
+	if err != nil {
+		return false
+	}
+
+	if angle < 0 || angle > 90 {
+		g.error_text = "Angle must be between 0 and 90"
+		return false
+	}
+
+	g.angle = angle
+	g.error_text = ""
+	return true
+}
+
+func (g *Game) validate_velocity() bool {
+	velocity, err := strconv.ParseFloat(g.velocity_input, 64)
+	if err != nil {
+		return false
+	}
+
+	if velocity < 25 || velocity > 200 {
+		g.error_text = "Velocity must be between 25 and 200"
+		return false
+	}
+
+	g.velocity = velocity
+	g.error_text = ""
+	return true
 }
