@@ -180,11 +180,11 @@ func (g *Game) move_projectile() {
 	g.projectile.y += g.projectile.dy
 
 	// detect a collision between the projectile and a player
-	if g.projectile.detect_collision(&g.player1) {
+	if g.player1.detect_collision(&g.projectile) {
 		g.stop_projectile()
 		g.trigger_win(&g.player2)
 		return
-	} else if g.projectile.detect_collision(&g.player2) {
+	} else if g.player2.detect_collision(&g.projectile) {
 		g.stop_projectile()
 		g.trigger_win(&g.player1)
 		return
