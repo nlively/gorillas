@@ -172,9 +172,13 @@ func (g *Game) fire_projectile() {
 
 func (g *Game) move_projectile() {
 
+	wind_x_offset := float64(g.wind) //* SCALE
+	gravity_y_offset := float64(GRAVITY) * SCALE
+
+	fmt.Printf("Applying wind offset of %f and gravity y offset of %f\n", wind_x_offset, gravity_y_offset)
 	// Increment coords by a set increment value
-	g.projectile.dx -= float64(g.wind) * SCALE
-	g.projectile.dy += float64(GRAVITY) * SCALE
+	g.projectile.dx -= wind_x_offset
+	g.projectile.dy += gravity_y_offset
 
 	g.projectile.x += g.projectile.dx
 	g.projectile.y += g.projectile.dy
@@ -222,9 +226,9 @@ func (g *Game) draw_wind(screen *ebiten.Image) {
 	var wind_text string
 	wind_human := int(math.Abs(g.wind) * 300)
 	if g.wind > 0 {
-		wind_text = fmt.Sprintf("Wind: %dmph east", wind_human)
-	} else {
 		wind_text = fmt.Sprintf("Wind: %dmph west", wind_human)
+	} else {
+		wind_text = fmt.Sprintf("Wind: %dmph east", wind_human)
 	}
 
 	draw_any_text(screen, wind_text, 475, 30, 16, color.RGBA{0xFF, 0xFF, 0x00, 0xFF})
