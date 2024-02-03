@@ -99,7 +99,7 @@ func (g *Game) next_turn() {
 }
 
 func (g *Game) setup_game() {
-	g.wind = rand.Float64() - 0.5
+	g.wind = (rand.Float64() - 0.5) / 3
 
 	g.setup_players()
 	g.setup_buildings()
